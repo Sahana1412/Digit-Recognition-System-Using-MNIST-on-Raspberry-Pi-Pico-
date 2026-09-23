@@ -1,8 +1,55 @@
 # MNIST Digit Recognition – Edge AI Deployment
 
-## 1. How to Run
+## 1. Requirements / Before Running
 
-### Step 1: Open the project
+### Software
+
+* Windows 10/11
+* Python 3.11
+* VS Code
+* Wokwi VS Code extension
+* Raspberry Pi Pico SDK
+* ARM GCC toolchain
+* CMake + Ninja
+
+### Python packages
+
+The virtual environment should contain:
+
+```text
+tensorflow
+numpy
+opencv-python
+pyserial
+```
+
+If needed:
+
+```powershell
+.\venv\Scripts\python.exe -m pip install tensorflow numpy opencv-python pyserial
+```
+
+### Project requirements
+
+Before running:
+
+1. Ensure the project folder is present.
+2. Ensure `venv` is available.
+3. Ensure the trained/quantized model is available.
+4. Ensure the Pico firmware has been built.
+5. Ensure `wokwi.toml` contains:
+
+```toml
+rfc2217ServerPort = 4000
+```
+
+6. Start the **Wokwi Raspberry Pi Pico simulation** before running the webcam program.
+7. Allow access to the laptop webcam.
+8. Place a handwritten/displayed digit clearly inside the green box.
+
+---
+
+# 2. How to Run
 
 Open PowerShell in:
 
@@ -10,52 +57,33 @@ Open PowerShell in:
 D:\AMRITA\SEMESTER 5\EOCandelectronics\Assignment\MNIST_PICO
 ```
 
-### Step 2: Activate the Python environment
+Run:
 
 ```powershell
-.\venv\Scripts\Activate.ps1
-```
-
-### Step 3: Start the Wokwi Pico simulation
-
-Open the `pico\mnist_pico` project in VS Code and start the Wokwi simulation.
-
-The Pico should display:
-
-```text
-Model loaded successfully.
-Tensor allocation successful.
-READY
-```
-
-### Step 4: Run the webcam application
-
-In another PowerShell terminal:
-
-```powershell
-cd "D:\AMRITA\SEMESTER 5\EOCandelectronics\Assignment\MNIST_PICO"
 .\venv\Scripts\python.exe webcam_to_pico.py
 ```
 
-A webcam window will open.
+Then:
 
-* Place a handwritten/displayed digit inside the green box.
+* Place a digit inside the green box.
 * Press **SPACE** to classify.
 * Press **Q** to exit.
 
-The prediction and Pico inference latency will be displayed.
+---
+
+# 3. Project Overview
+
+* Lightweight CNN trained on MNIST digits **0–9**.
+* Model converted to TensorFlow Lite.
+* Full INT8 quantization applied for edge deployment.
+* Quantized model deployed on **Raspberry Pi Pico** using TensorFlow Lite Micro.
+* Laptop webcam provides real-world input.
+* OpenCV converts the image to **28×28 INT8** format.
+* Pico performs local inference without cloud services.
 
 ---
 
-# 2. Project Overview
-
-This project implements a lightweight **MNIST digit recognition system** and deploys the quantized model on a **Raspberry Pi Pico** using TensorFlow Lite Micro.
-
-The laptop webcam captures a digit, OpenCV preprocesses it into a 28×28 image, and the INT8 image is sent to the Pico for local inference.
-
----
-
-# 3. System Pipeline
+# 4. System Pipeline
 
 ```text
 MNIST
@@ -70,9 +98,9 @@ Raspberry Pi Pico
   ↑
 Webcam
   ↓
-OpenCV Preprocessing
+OpenCV
   ↓
-28×28 INT8 Image
+28×28 INT8
   ↓
 Serial Transfer
   ↓
@@ -83,7 +111,7 @@ Prediction
 
 ---
 
-# 4. Model Architecture
+# 5. Model Architecture
 
 ```text
 Input: 28 × 28 × 1
@@ -107,7 +135,7 @@ Digit 0–9
 
 ---
 
-# 5. Training Setup
+# 6. Training Setup
 
 | Parameter       | Value                           |
 | --------------- | ------------------------------- |
@@ -124,19 +152,15 @@ Digit 0–9
 
 ---
 
-# 6. Optimization and Quantization
+# 7. Optimization and Quantization
 
 The trained model is converted to TensorFlow Lite and optimized using **full integer INT8 post-training quantization**.
 
-A representative dataset is used for quantization calibration.
-
-The deployed input uses:
-
 ```text
-Type       : INT8
-Scale      : 0.0039215689
-Zero point : -128
-Shape      : 1 × 28 × 28 × 1
+Input type       : INT8
+Input scale      : 0.0039215689
+Input zero point : -128
+Input shape      : 1 × 28 × 28 × 1
 ```
 
 Quantization:
@@ -147,9 +171,7 @@ q = round(x / scale) + zero_point
 
 ---
 
-# 7. Webcam Preprocessing
-
-OpenCV performs:
+# 8. Webcam Preprocessing
 
 ```text
 Webcam Frame
@@ -169,61 +191,41 @@ Resize
 INT8
 ```
 
-The processed image is designed to match the MNIST model input.
-
 ---
 
-# 8. Edge Deployment
+# 9. Edge Deployment
 
-The INT8 model is embedded into the Raspberry Pi Pico firmware and executed using **TensorFlow Lite Micro**.
+The INT8 model is embedded into the Pico firmware and executed using **TensorFlow Lite Micro**.
 
 The Pico:
 
-1. Receives the 28×28 INT8 image.
+1. Receives the image.
 2. Loads it into the input tensor.
 3. Runs inference.
-4. Finds the predicted digit.
+4. Determines the predicted digit.
 5. Measures inference latency.
-6. Sends the result back to the laptop.
-
-Required operators include:
-
-```text
-CONV_2D
-MAX_POOL_2D
-SHAPE
-STRIDED_SLICE
-PACK
-RESHAPE
-FULLY_CONNECTED
-SOFTMAX
-```
+6. Sends the result to the laptop.
 
 ---
 
-# 9. Communication
-
-The laptop first synchronizes with the Pico:
+# 10. Communication
 
 ```text
 Laptop → PING
 Pico   → READY
 ```
 
-The image is then transferred as **28 rows of 28 INT8 values**.
+The image is transferred as:
 
 ```text
-ROW 0  → ACK:0
-ROW 1  → ACK:1
-...
-ROW 27 → ACK:27
+28 rows × 28 INT8 values
 ```
 
-After receiving all rows, the Pico performs inference.
+Each row is acknowledged before the next row is sent.
 
 ---
 
-# 10. Full-Precision vs INT8 Comparison
+# 11. Full-Precision vs INT8 Comparison
 
 The models are compared using:
 
@@ -239,13 +241,11 @@ The models are compared using:
 | Inference latency  |    — |    — |
 | Memory consumption |    — |    — |
 
-The final values are obtained experimentally and reported in the results section.
-
 ---
 
-# 11. Real-World Webcam Testing
+# 12. Real-World Webcam Testing
 
-Ten real-world digits are tested using the webcam:
+Ten real-world digits are tested:
 
 ```text
 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
@@ -264,17 +264,13 @@ Ten real-world digits are tested using the webcam:
 |    9 |      8 |           |          |         |
 |   10 |      9 |           |          |         |
 
-### Accuracy
-
 ```text
 Accuracy = (Correct predictions / 10) × 100
 ```
 
 ---
 
-# 12. Example Result
-
-A successful webcam test produced:
+# 13. Example Result
 
 ```text
 Predicted digit : 3
