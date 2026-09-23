@@ -1,0 +1,5 @@
+[wokwi]
+version = 1
+firmware = "build/mnist_pico.uf2"
+elf = "build/mnist_pico.elf"
+rfc2217ServerPort = 4000
