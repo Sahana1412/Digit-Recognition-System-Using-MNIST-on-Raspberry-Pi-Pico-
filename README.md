@@ -243,4 +243,3 @@ The models are compared using:
 
 ---
 
-The displayed digit was correctly classified as **3**.
