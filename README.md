@@ -1,55 +1,89 @@
 # MNIST Digit Recognition – Edge AI Deployment
 
-## 1. Project Overview
+## 1. How to Run
 
-This project implements a lightweight **MNIST digit recognition system (0–9)** and deploys the optimized INT8 model on a **Raspberry Pi Pico** using **TensorFlow Lite Micro**.
+### Step 1: Open the project
 
-A laptop webcam is used to capture a handwritten or displayed digit. The image is processed using OpenCV, converted to a 28×28 grayscale image, quantized to INT8, and transferred to the Raspberry Pi Pico. The Pico performs local neural-network inference and returns the predicted digit and inference latency.
+Open PowerShell in:
 
-The complete pipeline works locally without cloud-based inference.
+```text
+D:\AMRITA\SEMESTER 5\EOCandelectronics\Assignment\MNIST_PICO
+```
+
+### Step 2: Activate the Python environment
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+### Step 3: Start the Wokwi Pico simulation
+
+Open the `pico\mnist_pico` project in VS Code and start the Wokwi simulation.
+
+The Pico should display:
+
+```text
+Model loaded successfully.
+Tensor allocation successful.
+READY
+```
+
+### Step 4: Run the webcam application
+
+In another PowerShell terminal:
+
+```powershell
+cd "D:\AMRITA\SEMESTER 5\EOCandelectronics\Assignment\MNIST_PICO"
+.\venv\Scripts\python.exe webcam_to_pico.py
+```
+
+A webcam window will open.
+
+* Place a handwritten/displayed digit inside the green box.
+* Press **SPACE** to classify.
+* Press **Q** to exit.
+
+The prediction and Pico inference latency will be displayed.
 
 ---
 
-## 2. System Pipeline
+# 2. Project Overview
+
+This project implements a lightweight **MNIST digit recognition system** and deploys the quantized model on a **Raspberry Pi Pico** using TensorFlow Lite Micro.
+
+The laptop webcam captures a digit, OpenCV preprocesses it into a 28×28 image, and the INT8 image is sent to the Pico for local inference.
+
+---
+
+# 3. System Pipeline
 
 ```text
-MNIST Dataset
-      ↓
-CNN Model Training
-      ↓
-Floating-Point Model
-      ↓
-TensorFlow Lite Conversion
-      ↓
+MNIST
+  ↓
+CNN Training
+  ↓
+TensorFlow Lite
+  ↓
 INT8 Quantization
-      ↓
-Optimized INT8 Model
-      ↓
-Model converted to C/C++
-      ↓
-Raspberry Pi Pico + TensorFlow Lite Micro
-      ↑
-      │
-Laptop Webcam
-      ↓
+  ↓
+Raspberry Pi Pico
+  ↑
+Webcam
+  ↓
 OpenCV Preprocessing
-      ↓
-28 × 28 Image
-      ↓
-INT8 Quantization
-      ↓
+  ↓
+28×28 INT8 Image
+  ↓
 Serial Transfer
-      ↓
+  ↓
 Pico Inference
-      ↓
-Predicted Digit
+  ↓
+Prediction
 ```
 
 ---
 
-## 3. Model Architecture
-
-The project uses a lightweight Convolutional Neural Network:
+# 4. Model Architecture
 
 ```text
 Input: 28 × 28 × 1
@@ -64,188 +98,173 @@ MaxPooling: 2×2
         ↓
 Flatten
         ↓
-Dense: 32 neurons, ReLU
+Dense: 32, ReLU
         ↓
-Dense: 10 neurons, Softmax
+Dense: 10, Softmax
         ↓
 Digit 0–9
 ```
 
-The architecture was selected to keep the model lightweight enough for microcontroller deployment.
+---
+
+# 5. Training Setup
+
+| Parameter       | Value                           |
+| --------------- | ------------------------------- |
+| Dataset         | MNIST                           |
+| Training images | 60,000                          |
+| Test images     | 10,000                          |
+| Image size      | 28×28                           |
+| Classes         | 10                              |
+| Optimizer       | Adam                            |
+| Learning rate   | 0.001                           |
+| Loss            | Sparse Categorical Crossentropy |
+| Batch size      | 128                             |
+| Epochs          | 5                               |
 
 ---
 
-## 4. Training
+# 6. Optimization and Quantization
 
-The model is trained using the MNIST dataset.
+The trained model is converted to TensorFlow Lite and optimized using **full integer INT8 post-training quantization**.
 
-### Training configuration
+A representative dataset is used for quantization calibration.
 
-* Dataset: MNIST
-* Training samples: 60,000
-* Test samples: 10,000
-* Image size: 28×28
-* Number of classes: 10
-* Optimizer: Adam
-* Learning rate: 0.001
-* Loss: Sparse Categorical Crossentropy
-* Batch size: 128
-* Epochs: 5
+The deployed input uses:
 
-The input images are normalized before training.
+```text
+Type       : INT8
+Scale      : 0.0039215689
+Zero point : -128
+Shape      : 1 × 28 × 28 × 1
+```
+
+Quantization:
+
+```text
+q = round(x / scale) + zero_point
+```
 
 ---
 
-## 5. Optimization and Quantization
+# 7. Webcam Preprocessing
 
-The trained floating-point model is converted to TensorFlow Lite format.
-
-Full integer **INT8 post-training quantization** is then applied using a representative dataset.
-
-The deployed model uses:
-
-```text
-Input type       : INT8
-Input scale      : 0.0039215689
-Input zero point : -128
-Input shape      : 1 × 28 × 28 × 1
-```
-
-Quantization reduces model storage and computational requirements, making the model suitable for deployment on the Raspberry Pi Pico.
-
-The quantization relationship is:
-
-```text
-quantized_value =
-    round(float_value / scale) + zero_point
-```
-
-## 6. Webcam Preprocessing
-
-The webcam image is processed using OpenCV.
-
-The preprocessing pipeline is:
+OpenCV performs:
 
 ```text
 Webcam Frame
      ↓
-Horizontal Flip
+Flip
      ↓
-Center Region of Interest
+Center ROI
      ↓
-Grayscale Conversion
+Grayscale
      ↓
-Thresholding
+Threshold
      ↓
-Background Inversion
+Resize
      ↓
-Resize to 28×28
+28 × 28
      ↓
-INT8 Quantization
+INT8
 ```
 
-The processed image is designed to match the input format expected by the MNIST CNN.
+The processed image is designed to match the MNIST model input.
 
 ---
 
-## 7. Communication Between Laptop and Pico
+# 8. Edge Deployment
 
-A reliable row-based serial protocol is used.
+The INT8 model is embedded into the Raspberry Pi Pico firmware and executed using **TensorFlow Lite Micro**.
 
-The laptop first sends:
+The Pico:
+
+1. Receives the 28×28 INT8 image.
+2. Loads it into the input tensor.
+3. Runs inference.
+4. Finds the predicted digit.
+5. Measures inference latency.
+6. Sends the result back to the laptop.
+
+Required operators include:
 
 ```text
-PING
+CONV_2D
+MAX_POOL_2D
+SHAPE
+STRIDED_SLICE
+PACK
+RESHAPE
+FULLY_CONNECTED
+SOFTMAX
 ```
 
-The Pico responds:
+---
+
+# 9. Communication
+
+The laptop first synchronizes with the Pico:
 
 ```text
-READY
+Laptop → PING
+Pico   → READY
 ```
 
-The 28×28 image is then transmitted as 28 separate rows.
+The image is then transferred as **28 rows of 28 INT8 values**.
 
 ```text
-ROW 0  <28 INT8 values>
-ACK:0
-
-ROW 1  <28 INT8 values>
-ACK:1
-
+ROW 0  → ACK:0
+ROW 1  → ACK:1
 ...
-
-ROW 27 <28 INT8 values>
-ACK:27
+ROW 27 → ACK:27
 ```
 
 After receiving all rows, the Pico performs inference.
 
-The Pico returns information such as:
+---
 
-```text
-PREDICTION:3
-LATENCY_US:30179
-```
+# 10. Full-Precision vs INT8 Comparison
+
+The models are compared using:
+
+* Classification accuracy
+* Model size
+* Inference latency
+* Memory consumption
+
+| Metric             | FP32 | INT8 |
+| ------------------ | ---: | ---: |
+| Accuracy           |    — |    — |
+| Model size         |    — |    — |
+| Inference latency  |    — |    — |
+| Memory consumption |    — |    — |
+
+The final values are obtained experimentally and reported in the results section.
 
 ---
 
-## 8. Edge Deployment
+# 11. Real-World Webcam Testing
 
-The quantized TensorFlow Lite model is converted into a C/C++ array and embedded into the Raspberry Pi Pico firmware.
-
-The Pico uses **TensorFlow Lite Micro** to perform inference locally.
-
-Required operators include:
-
-* Conv2D
-* MaxPool2D
-* Shape
-* StridedSlice
-* Pack
-* Reshape
-* FullyConnected
-* Softmax
-
-The tensor arena used by the firmware is statically allocated.
-
----
-
-## 9. Real-World Webcam Testing
-
-The system is designed to test 10 real-world handwritten or displayed digits:
+Ten real-world digits are tested using the webcam:
 
 ```text
-0
-1
-2
-3
-4
-5
-6
-7
-8
-9
+0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 ```
 
-For each digit, the webcam captures the input and the Raspberry Pi Pico performs the final prediction.
+| Test | Actual | Predicted | Correct? | Latency |
+| ---: | -----: | --------: | :------: | ------: |
+|    1 |      0 |           |          |         |
+|    2 |      1 |           |          |         |
+|    3 |      2 |           |          |         |
+|    4 |      3 |           |          |         |
+|    5 |      4 |           |          |         |
+|    6 |      5 |           |          |         |
+|    7 |      6 |           |          |         |
+|    8 |      7 |           |          |         |
+|    9 |      8 |           |          |         |
+|   10 |      9 |           |          |         |
 
-The results are recorded in the report using:
-
-| Test | Actual | Predicted | Correct? | Pico Latency |
-| ---: | -----: | --------: | :------: | -----------: |
-|    1 |      0 |           |          |              |
-|    2 |      1 |           |          |              |
-|    3 |      2 |           |          |              |
-|    4 |      3 |           |          |              |
-|    5 |      4 |           |          |              |
-|    6 |      5 |           |          |              |
-|    7 |      6 |           |          |              |
-|    8 |      7 |           |          |              |
-|    9 |      8 |           |          |              |
-|   10 |      9 |           |          |              |
-
-Real-world webcam accuracy is calculated as:
+### Accuracy
 
 ```text
 Accuracy = (Correct predictions / 10) × 100
@@ -253,53 +272,14 @@ Accuracy = (Correct predictions / 10) × 100
 
 ---
 
-## 10. Model Comparison
+# 12. Example Result
 
-The full-precision and quantized models are compared using:
-
-* Classification accuracy
-* Model size
-* Inference latency
-* Memory consumption
-
-The final values are reported in the project report based on the measured experimental results.
-
----
-
-## 11. Example Edge Inference Result
-
-A successful real-world webcam test produced:
+A successful webcam test produced:
 
 ```text
-Predicted digit: 3
-Pico latency   : 30179 us
-                 30.18 ms
+Predicted digit : 3
+Pico latency    : 30179 µs
+                  30.18 ms
 ```
 
-The displayed digit was correctly classified as `3`.
-
----
-
-## 12. Technologies Used
-
-* Python
-* TensorFlow / Keras
-* TensorFlow Lite
-* TensorFlow Lite Micro
-* OpenCV
-* NumPy
-* PySerial
-* Raspberry Pi Pico / RP2040
-* Raspberry Pi Pico SDK
-* C/C++
-* Wokwi
-
-## 13. Conclusion
-
-```text
-Training → Optimization → Quantization → Deployment
-       → Webcam Capture → Preprocessing
-       → INT8 Transfer → Pico Inference → Prediction
-```
-
-No cloud inference is required for the final prediction.
+The displayed digit was correctly classified as **3**.
