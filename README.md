@@ -243,39 +243,4 @@ The models are compared using:
 
 ---
 
-# 12. Real-World Webcam Testing
-
-Ten real-world digits are tested:
-
-```text
-0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-```
-
-| Test | Actual | Predicted | Correct? | Latency |
-| ---: | -----: | --------: | :------: | ------: |
-|    1 |      0 |           |          |         |
-|    2 |      1 |           |          |         |
-|    3 |      2 |           |          |         |
-|    4 |      3 |           |          |         |
-|    5 |      4 |           |          |         |
-|    6 |      5 |           |          |         |
-|    7 |      6 |           |          |         |
-|    8 |      7 |           |          |         |
-|    9 |      8 |           |          |         |
-|   10 |      9 |           |          |         |
-
-```text
-Accuracy = (Correct predictions / 10) × 100
-```
-
----
-
-# 13. Example Result
-
-```text
-Predicted digit : 3
-Pico latency    : 30179 µs
-                  30.18 ms
-```
-
 The displayed digit was correctly classified as **3**.
